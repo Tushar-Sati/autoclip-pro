@@ -1,0 +1,35 @@
+# Python Virtual Environment & Cache
+backend/venv/
+backend/__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+
+# Next.js & Node
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
+.next/
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Media Storage & Temporary Processing Files
+storage/downloads/*
+storage/temp/*
+storage/clips/*.mp4
+storage/clips/*_summary.json
+!storage/downloads/.gitkeep
+!storage/temp/.gitkeep
+!storage/clips/.gitkeep
+
+# Environment variables & Local IDE
+.env
+.env.local
+.env.*.local
+.vscode/
+.idea/
+*.swp
+*.swo
