@@ -23,6 +23,7 @@ from backend.app.core.highlight_detector import HighlightDetector
 from backend.app.core.subtitle_generator import SubtitleGenerator
 from backend.app.core.virality_scorer import ViralityScorer
 from backend.app.core.video_renderer import VideoRenderer
+from backend.app.core.thumbnail_generator import ThumbnailGenerator
 
 HISTORY_FILE = STORAGE_DIR / "history.json"
 
@@ -34,6 +35,8 @@ class ClippingPipeline:
         self.subtitle_gen = SubtitleGenerator()
         self.scorer = ViralityScorer()
         self.renderer = VideoRenderer()
+        self.thumb_gen = ThumbnailGenerator()
+
 
     def _load_history(self) -> Dict[str, List[Dict[str, float]]]:
         if HISTORY_FILE.exists():
@@ -54,7 +57,10 @@ class ClippingPipeline:
         target_duration: int = 30,
         max_clips: int = 3,
         force_split_screen: Optional[bool] = None,
-        manual_offset_seconds: Optional[int] = None
+        manual_offset_seconds: Optional[int] = None,
+        show_watermark: bool = False,
+        show_headline: bool = True,
+        show_captions: bool = True
     ) -> Dict[str, Any]:
         """
         Full end-to-end autonomous clipping pipeline.
@@ -151,16 +157,19 @@ class ClippingPipeline:
             )
             headline_text = virality_eval["selected_title"].split("(")[0].strip()
 
-            # Generate Hormozi Animated ASS Subtitles with Center Headline Banner
-            ass_path = str(TEMP_DIR / f"{video_id}_clip_{clip_num}.ass")
-            self.subtitle_gen.generate_ass(
+            # Generate Hormozi Animated ASS Subtitles with Center Headline Banner (and optional watermark)
+            raw_ass_path = str(TEMP_DIR / f"{video_id}_clip_{clip_num}.ass")
+            actual_ass = self.subtitle_gen.generate_ass(
                 words=clip_words,
-                output_path=ass_path,
+                output_path=raw_ass_path,
                 clip_start=clip_start,
                 clip_duration=clip["duration"],
                 headline=headline_text,
                 vertical_margin=360,
-                uploader=uploader
+                uploader=uploader,
+                show_watermark=show_watermark,
+                show_headline=show_headline,
+                show_captions=show_captions
             )
 
             # Render Final 1080p 9:16 Video
@@ -170,8 +179,17 @@ class ClippingPipeline:
                 start_time=clip_start,
                 end_time=clip_end,
                 framing_info=framing_info,
-                subtitle_ass_path=ass_path,
+                subtitle_ass_path=actual_ass,
                 output_path=output_clip_path,
+                uploader=uploader
+            )
+
+            # Generate High-CTR Thumbnails (Vertical Short Cover + 16:9 Landscape)
+            thumb_prefix = str(CLIPS_DIR / f"{video_id}_short_{clip_num}")
+            thumbnails = self.thumb_gen.generate_thumbnails(
+                video_path=output_clip_path,
+                output_prefix=thumb_prefix,
+                headline_text=headline_text,
                 uploader=uploader
             )
 
@@ -188,6 +206,10 @@ class ClippingPipeline:
                 "clip_index": clip_num,
                 "video_path": output_clip_path,
                 "relative_video_path": f"/storage/clips/{video_id}_short_{clip_num}.mp4",
+                "thumbnails": {
+                    "vertical": f"/storage/clips/{video_id}_short_{clip_num}_thumb_vertical.jpg",
+                    "landscape": f"/storage/clips/{video_id}_short_{clip_num}_thumb_landscape.jpg"
+                },
                 "start": clip_start,
                 "end": clip_end,
                 "duration": clip["duration"],
@@ -201,6 +223,7 @@ class ClippingPipeline:
                 "layout_mode": framing_info["mode"],
                 "status": "ready"
             })
+
 
         history[video_id] = past_clips
         self._save_history(history)

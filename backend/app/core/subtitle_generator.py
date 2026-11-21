@@ -1,5 +1,5 @@
 import os
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from pathlib import Path
 
 class SubtitleGenerator:
@@ -30,12 +30,19 @@ class SubtitleGenerator:
         font_name: str = "Arial",
         font_size: int = 70,
         vertical_margin: int = 380,
-        uploader: str = "Streamer"
-    ) -> str:
+        uploader: str = "Streamer",
+        show_watermark: bool = False,
+        show_headline: bool = True,
+        show_captions: bool = True
+    ) -> Optional[str]:
         """
-        Generates an Advanced SubStation Alpha (.ass) file with word-by-word
-        karaoke-style active highlighting, bold middle headline banner, and attribution.
+        Generates an Advanced SubStation Alpha (.ass) file with optional word-by-word
+        karaoke-style active highlighting, bold middle headline banner, and attribution watermark.
         """
+        # If all text layers are disabled, do not generate ASS file
+        if not show_watermark and not show_headline and not show_captions:
+            return None
+
         clip_duration_str = self.format_time_ass(clip_duration)
         clean_uploader = uploader.replace("'", "").replace(":", "")
         clean_headline = headline.replace("'", "").replace(":", "").upper()
@@ -55,12 +62,20 @@ Style: CreditWatermark,{font_name},28,&H60FFFFFF,&H000000FF,&H00000000,&H8000000
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
-Dialogue: 0,0:00:00.00,{clip_duration_str},CreditWatermark,,0,0,0,,Clip from @{clean_uploader}
 """
-        if clean_headline:
+        if show_watermark and clean_uploader:
+            ass_header += f"Dialogue: 0,0:00:00.00,{clip_duration_str},CreditWatermark,,0,0,0,,Clip from @{clean_uploader}\n"
+
+        if show_headline and clean_headline:
             ass_header += f"Dialogue: 1,0:00:00.00,{clip_duration_str},HookHeadline,,0,0,0,,{clean_headline}\n"
 
         dialogue_lines = []
+
+        if not show_captions:
+            # Write only headers (watermark/headline) without captions
+            with open(output_path, "w", encoding="utf-8") as f:
+                f.write(ass_header)
+            return output_path
 
 
 

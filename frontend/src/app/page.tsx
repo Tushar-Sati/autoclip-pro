@@ -5,7 +5,8 @@ import {
   Play, Sparkles, Youtube, CheckCircle2, Clock, 
   Layers, Volume2, ShieldCheck, Share2, UploadCloud, 
   TrendingUp, Copy, Check, AlertCircle, RefreshCw,
-  Settings, ExternalLink, Globe, Server, CheckCircle, XCircle
+  Settings, ExternalLink, Globe, Server, CheckCircle, XCircle,
+  Image as ImageIcon, Download, Eye
 } from "lucide-react";
 
 interface VideoInfo {
@@ -22,6 +23,10 @@ interface Clip {
   clip_id: string;
   clip_index: number;
   relative_video_path: string;
+  thumbnails?: {
+    vertical?: string;
+    landscape?: string;
+  };
   start: number;
   end: number;
   duration: number;
@@ -45,6 +50,9 @@ export default function Home() {
   const [targetDuration, setTargetDuration] = useState<number>(30);
   const [maxClips, setMaxClips] = useState<number>(3);
   const [splitScreen, setSplitScreen] = useState<boolean>(true);
+  const [showWatermark, setShowWatermark] = useState<boolean>(false);
+  const [showHeadline, setShowHeadline] = useState<boolean>(true);
+  const [showCaptions, setShowCaptions] = useState<boolean>(true);
   
   // Status states
   const [isFetchingInfo, setIsFetchingInfo] = useState(false);
@@ -66,6 +74,7 @@ export default function Home() {
   // Modal / Antigravity posting state
   const [activePostModal, setActivePostModal] = useState<Clip | null>(null);
   const [antigravityPosting, setAntigravityPosting] = useState(false);
+  const [previewModes, setPreviewModes] = useState<Record<string, "video" | "thumb_vert" | "thumb_land">>({});
 
   // Initialize backend URL based on environment
   useEffect(() => {
@@ -253,6 +262,9 @@ export default function Home() {
           target_duration: targetDuration,
           max_clips: maxClips,
           force_split_screen: splitScreen,
+          show_watermark: showWatermark,
+          show_headline: showHeadline,
+          show_captions: showCaptions,
         }),
       });
 
@@ -550,6 +562,81 @@ export default function Home() {
             </div>
           </div>
 
+          {/* On-Video Text & Watermark Options */}
+          <div className="pt-4 border-t border-[#1E2235] space-y-3">
+            <label className="text-xs font-semibold text-gray-300 flex items-center justify-between">
+              <span>On-Video Text & Overlay Controls</span>
+              <span className="text-[11px] text-gray-500">Toggle text overlays on or off</span>
+            </label>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {/* Attribution Watermark toggle */}
+              <button
+                type="button"
+                onClick={() => setShowWatermark(!showWatermark)}
+                className={`p-3 rounded-xl border text-left flex items-start gap-2.5 transition ${
+                  showWatermark
+                    ? "bg-indigo-600/20 border-indigo-500/50 text-white"
+                    : "bg-[#1A1D2B] border-transparent hover:border-gray-700 text-gray-400"
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={showWatermark}
+                  onChange={() => {}}
+                  className="mt-0.5 accent-indigo-500 rounded cursor-pointer"
+                />
+                <div>
+                  <p className="text-xs font-bold text-gray-200">Attribution Watermark</p>
+                  <p className="text-[10px] text-gray-400">"Clip from @Streamer" (Disabled by default)</p>
+                </div>
+              </button>
+
+              {/* Middle Headline Banner toggle */}
+              <button
+                type="button"
+                onClick={() => setShowHeadline(!showHeadline)}
+                className={`p-3 rounded-xl border text-left flex items-start gap-2.5 transition ${
+                  showHeadline
+                    ? "bg-indigo-600/20 border-indigo-500/50 text-white"
+                    : "bg-[#1A1D2B] border-transparent hover:border-gray-700 text-gray-400"
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={showHeadline}
+                  onChange={() => {}}
+                  className="mt-0.5 accent-indigo-500 rounded cursor-pointer"
+                />
+                <div>
+                  <p className="text-xs font-bold text-gray-200">Center Viral Hook</p>
+                  <p className="text-[10px] text-gray-400">Middle divider hook headline</p>
+                </div>
+              </button>
+
+              {/* Dynamic Captions toggle */}
+              <button
+                type="button"
+                onClick={() => setShowCaptions(!showCaptions)}
+                className={`p-3 rounded-xl border text-left flex items-start gap-2.5 transition ${
+                  showCaptions
+                    ? "bg-indigo-600/20 border-indigo-500/50 text-white"
+                    : "bg-[#1A1D2B] border-transparent hover:border-gray-700 text-gray-400"
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={showCaptions}
+                  onChange={() => {}}
+                  className="mt-0.5 accent-indigo-500 rounded cursor-pointer"
+                />
+                <div>
+                  <p className="text-xs font-bold text-gray-200">Animated Captions</p>
+                  <p className="text-[10px] text-gray-400">Hormozi karaoke subtitles</p>
+                </div>
+              </button>
+            </div>
+          </div>
+
           {/* AI Features Checklist */}
           <div className="pt-2 border-t border-[#1E2235] grid grid-cols-2 sm:grid-cols-4 gap-3 text-[11px] text-gray-400">
             <div className="flex items-center gap-2">
@@ -607,23 +694,93 @@ export default function Home() {
                   key={clip.clip_id}
                   className="bg-[#12141D] rounded-2xl border border-[#232738] overflow-hidden flex flex-col hover:border-indigo-500/50 transition-all shadow-xl"
                 >
-                  {/* Video Player */}
+                  {/* Preview Mode Switcher Tabs */}
+                  <div className="flex items-center justify-between bg-[#161822] px-3 py-2 border-b border-[#232738] text-[11px]">
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => setPreviewModes(prev => ({ ...prev, [clip.clip_id]: "video" }))}
+                        className={`px-2.5 py-1 rounded-lg font-bold transition flex items-center gap-1 ${
+                          (previewModes[clip.clip_id] || "video") === "video"
+                            ? "bg-indigo-600 text-white shadow"
+                            : "text-gray-400 hover:text-gray-200"
+                        }`}
+                      >
+                        <Play className="w-3 h-3" /> Video
+                      </button>
+                      <button
+                        onClick={() => setPreviewModes(prev => ({ ...prev, [clip.clip_id]: "thumb_vert" }))}
+                        className={`px-2.5 py-1 rounded-lg font-bold transition flex items-center gap-1 ${
+                          previewModes[clip.clip_id] === "thumb_vert"
+                            ? "bg-indigo-600 text-white shadow"
+                            : "text-gray-400 hover:text-gray-200"
+                        }`}
+                      >
+                        <ImageIcon className="w-3 h-3" /> 9:16 Cover
+                      </button>
+                      <button
+                        onClick={() => setPreviewModes(prev => ({ ...prev, [clip.clip_id]: "thumb_land" }))}
+                        className={`px-2.5 py-1 rounded-lg font-bold transition flex items-center gap-1 ${
+                          previewModes[clip.clip_id] === "thumb_land"
+                            ? "bg-indigo-600 text-white shadow"
+                            : "text-gray-400 hover:text-gray-200"
+                        }`}
+                      >
+                        <Layers className="w-3 h-3" /> 16:9 Thumb
+                      </button>
+                    </div>
+                    <span className="text-[10px] text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                      1080p
+                    </span>
+                  </div>
+
+                  {/* Video / Thumbnail Display Container */}
                   <div className="relative aspect-[9/16] bg-black max-h-[460px] flex items-center justify-center overflow-hidden">
-                    <video
-                      src={`${videoBaseUrl}${clip.relative_video_path}`}
-                      controls
-                      className="w-full h-full object-cover"
-                    />
+                    {(previewModes[clip.clip_id] || "video") === "video" && (
+                      <video
+                        src={`${videoBaseUrl}${clip.relative_video_path}`}
+                        controls
+                        className="w-full h-full object-cover"
+                      />
+                    )}
+
+                    {previewModes[clip.clip_id] === "thumb_vert" && (
+                      <img
+                        src={
+                          clip.thumbnails?.vertical
+                            ? `${videoBaseUrl}${clip.thumbnails.vertical}`
+                            : `${videoBaseUrl}${clip.relative_video_path.replace('.mp4', '_thumb_vertical.jpg')}`
+                        }
+                        alt="9:16 Shorts Cover"
+                        className="w-full h-full object-cover"
+                      />
+                    )}
+
+                    {previewModes[clip.clip_id] === "thumb_land" && (
+                      <div className="w-full h-full flex flex-col items-center justify-center bg-black p-3 text-center">
+                        <img
+                          src={
+                            clip.thumbnails?.landscape
+                              ? `${videoBaseUrl}${clip.thumbnails.landscape}`
+                              : `${videoBaseUrl}${clip.relative_video_path.replace('.mp4', '_thumb_landscape.jpg')}`
+                          }
+                          alt="16:9 YouTube Thumbnail"
+                          className="w-full aspect-[16/9] object-contain rounded-lg border border-gray-800 shadow-2xl"
+                        />
+                        <span className="text-[11px] text-gray-400 mt-3 font-semibold">
+                          1280x720 High-CTR YouTube Thumbnail
+                        </span>
+                      </div>
+                    )}
                     
                     {/* Virality Score Badge */}
-                    <div className="absolute top-3 right-3 bg-black/80 backdrop-blur-md px-3 py-1.5 rounded-full border border-pink-500/30 flex items-center gap-1.5 shadow-lg">
+                    <div className="absolute top-3 right-3 bg-black/80 backdrop-blur-md px-3 py-1.5 rounded-full border border-pink-500/30 flex items-center gap-1.5 shadow-lg z-10">
                       <Sparkles className="w-3.5 h-3.5 text-pink-400" />
                       <span className="font-black text-xs text-pink-300">
                         {clip.virality_rate}/100
                       </span>
                     </div>
 
-                    <div className="absolute top-3 left-3 bg-black/80 backdrop-blur-md px-2.5 py-1 rounded-md text-[10px] font-bold text-gray-300">
+                    <div className="absolute top-3 left-3 bg-black/80 backdrop-blur-md px-2.5 py-1 rounded-md text-[10px] font-bold text-gray-300 z-10">
                       Clip #{clip.clip_index} • {Math.round(clip.duration)}s
                     </div>
                   </div>
@@ -659,8 +816,40 @@ export default function Home() {
                       </div>
                     </div>
 
-                    {/* Action Buttons */}
+                    {/* Action Buttons & Thumbnail Downloads */}
                     <div className="pt-2 space-y-2">
+                      <div className="grid grid-cols-2 gap-2">
+                        <a
+                          href={
+                            clip.thumbnails?.vertical
+                              ? `${videoBaseUrl}${clip.thumbnails.vertical}`
+                              : `${videoBaseUrl}${clip.relative_video_path.replace('.mp4', '_thumb_vertical.jpg')}`
+                          }
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          download={`cover_${clip.clip_id}.jpg`}
+                          className="py-2 px-2.5 rounded-xl bg-[#1A1D2B] hover:bg-[#23273A] border border-[#2B3048] text-[11px] font-semibold text-gray-300 flex items-center justify-center gap-1.5 transition"
+                        >
+                          <Download className="w-3.5 h-3.5 text-indigo-400" />
+                          9:16 Cover
+                        </a>
+
+                        <a
+                          href={
+                            clip.thumbnails?.landscape
+                              ? `${videoBaseUrl}${clip.thumbnails.landscape}`
+                              : `${videoBaseUrl}${clip.relative_video_path.replace('.mp4', '_thumb_landscape.jpg')}`
+                          }
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          download={`thumbnail_${clip.clip_id}.jpg`}
+                          className="py-2 px-2.5 rounded-xl bg-[#1A1D2B] hover:bg-[#23273A] border border-[#2B3048] text-[11px] font-semibold text-gray-300 flex items-center justify-center gap-1.5 transition"
+                        >
+                          <ImageIcon className="w-3.5 h-3.5 text-pink-400" />
+                          16:9 Thumb
+                        </a>
+                      </div>
+
                       <button
                         onClick={() => setActivePostModal(clip)}
                         className="w-full py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-xs font-bold text-white flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20"
@@ -691,6 +880,24 @@ export default function Home() {
                 >
                   ✕
                 </button>
+              </div>
+
+              {/* Thumbnail & Video Summary Banner */}
+              <div className="flex gap-4 items-center bg-[#1A1D2B] p-3 rounded-xl border border-[#2B3048]">
+                <img
+                  src={
+                    activePostModal.thumbnails?.vertical
+                      ? `${videoBaseUrl}${activePostModal.thumbnails.vertical}`
+                      : `${videoBaseUrl}${activePostModal.relative_video_path.replace('.mp4', '_thumb_vertical.jpg')}`
+                  }
+                  alt="Thumbnail"
+                  className="w-16 h-28 object-cover rounded-lg border border-gray-700 shrink-0"
+                />
+                <div className="text-[11px] text-gray-300 space-y-1">
+                  <p className="font-bold text-white text-xs">Ready for Autonomous Upload</p>
+                  <p className="text-gray-400">Antigravity will upload this 1080p Short and apply the generated high-CTR cover.</p>
+                  <span className="inline-block px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 text-[10px] font-bold">1080x1920 Full HD</span>
+                </div>
               </div>
 
               <div className="space-y-3 text-xs">

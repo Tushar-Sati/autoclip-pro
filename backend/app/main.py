@@ -39,6 +39,9 @@ class ClipRequest(BaseModel):
     target_duration: int = 30
     max_clips: int = 3
     force_split_screen: Optional[bool] = None
+    show_watermark: bool = False
+    show_headline: bool = True
+    show_captions: bool = True
 
 class PostRequest(BaseModel):
     clip_id: str
@@ -82,7 +85,10 @@ def start_clipping(req: ClipRequest):
             youtube_url=req.url,
             target_duration=req.target_duration,
             max_clips=req.max_clips,
-            force_split_screen=req.force_split_screen
+            force_split_screen=req.force_split_screen,
+            show_watermark=req.show_watermark,
+            show_headline=req.show_headline,
+            show_captions=req.show_captions
         )
         return {"success": True, "data": result}
     except Exception as e:
@@ -123,14 +129,25 @@ def prepare_antigravity_post(req: PostRequest):
     if not target_video or not Path(target_video).exists():
         raise HTTPException(status_code=404, detail="Clip video file not found.")
 
+    # Locate generated thumbnails
+    target_thumb = None
+    for thumb in CLIPS_DIR.glob(f"*{req.clip_id}*_thumb_vertical.jpg"):
+        target_thumb = str(thumb)
+        break
+    if not target_thumb:
+        for thumb in CLIPS_DIR.glob(f"*{req.clip_id}*_thumb_landscape.jpg"):
+            target_thumb = str(thumb)
+            break
+
     payload = {
         "status": "ready_for_antigravity",
         "video_path": target_video,
+        "thumbnail_path": target_thumb,
         "title": req.title or "Viral Moment! #Shorts",
         "description": req.description or "Automated Short #shorts",
         "tags": req.tags or ["shorts", "viral", "gaming"],
         "visibility": req.visibility,
-        "instructions": "Call Antigravity's Chrome DevTools MCP or CMD uploader to publish this clip to YouTube Studio."
+        "instructions": "Call Antigravity's Chrome DevTools MCP or CMD uploader to publish this clip and thumbnail to YouTube Studio."
     }
 
     return {"success": True, "posting_task": payload}
