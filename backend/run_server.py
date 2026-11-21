@@ -14,4 +14,4 @@ if __name__ == "__main__":
     print("  🌐 API running at: http://localhost:8000")
     print("  📑 Docs at: http://localhost:8000/docs")
     print("=" * 60)
-    uvicorn.run("backend.app.main.py:app", host="0.0.0.0", port=8000, reload=False)
+    uvicorn.run("backend.app.main:app", host="0.0.0.0", port=8000, reload=False)

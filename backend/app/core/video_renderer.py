@@ -31,8 +31,8 @@ class VideoRenderer:
         # Prepare subtitle filter if available
         sub_filter = ""
         if subtitle_ass_path and Path(subtitle_ass_path).exists():
-            clean_ass = str(Path(subtitle_ass_path).resolve()).replace("\\", "/")
-            sub_filter = f"ass={clean_ass}"
+            clean_ass = str(Path(subtitle_ass_path).resolve()).replace("\\", "/").replace(":", r"\:")
+            sub_filter = f"ass='{clean_ass}'"
 
         audio_filters = self.shield.get_audio_filters(duration, apply_micro_tuning=True)
 
