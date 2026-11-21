@@ -13,6 +13,9 @@ class CopyrightShield:
             # Subtle 1.5% speed increase and sample rate modulation
             filters.append("atempo=1.015")
 
+        # YouTube Mobile Standard Loudness Normalization (boosts quiet voice, punchy mix)
+        filters.append("loudnorm=I=-14:LRA=7:TP=-1.5")
+
         # Anti-pop audio crossfades
         fade_out_start = max(0.0, duration - 0.05)
         filters.append("afade=t=in:ss=0:d=0.03")

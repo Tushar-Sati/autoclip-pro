@@ -37,11 +37,15 @@ interface Clip {
     emotional_intensity: number;
     narrative_flow: number;
     rewatchability: number;
+    sub_conversion_potential?: number;
   };
   title: string;
   suggested_titles: string[];
   description: string;
   hashtags: string[];
+  hashtags_string?: string;
+  pinned_comment?: string;
+  growth_tips?: string[];
   layout_mode: string;
 }
 
@@ -75,6 +79,13 @@ export default function Home() {
   const [activePostModal, setActivePostModal] = useState<Clip | null>(null);
   const [antigravityPosting, setAntigravityPosting] = useState(false);
   const [previewModes, setPreviewModes] = useState<Record<string, "video" | "thumb_vert" | "thumb_land">>({});
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  const copyToClipboard = (text: string, fieldId: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedField(fieldId);
+    setTimeout(() => setCopiedField(null), 2000);
+  };
 
   // Initialize backend URL based on environment
   useEffect(() => {
@@ -806,12 +817,52 @@ export default function Home() {
                           <span className="text-indigo-400 font-bold">{clip.virality_breakdown.emotional_intensity}%</span>
                         </div>
                         <div className="flex justify-between text-gray-400">
-                          <span>Story Flow:</span>
-                          <span className="text-purple-400 font-bold">{clip.virality_breakdown.narrative_flow}%</span>
-                        </div>
-                        <div className="flex justify-between text-gray-400">
                           <span>Loop Score:</span>
                           <span className="text-pink-400 font-bold">{clip.virality_breakdown.rewatchability}%</span>
+                        </div>
+                        <div className="flex justify-between text-gray-400">
+                          <span>Sub Potential:</span>
+                          <span className="text-yellow-400 font-bold">{clip.virality_breakdown.sub_conversion_potential || 92}%</span>
+                        </div>
+                      </div>
+
+                      {/* Growth & Engagement Quick-Actions */}
+                      <div className="mt-3 p-2.5 rounded-xl bg-[#161824] border border-[#232738] space-y-2">
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="font-bold text-gray-300 flex items-center gap-1">
+                            <Sparkles className="w-3 h-3 text-pink-400" />
+                            Viral Growth Pack
+                          </span>
+                          <span className="text-[10px] text-emerald-400 font-semibold">Algorithmic Boost</span>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-1.5 text-[10px]">
+                          <button
+                            type="button"
+                            onClick={() => copyToClipboard(clip.hashtags_string || clip.hashtags.join(" "), `${clip.clip_id}-tags`)}
+                            className="py-1.5 px-2 rounded-lg bg-[#1E2235] hover:bg-[#282D46] text-gray-300 font-semibold flex items-center justify-center gap-1 transition"
+                          >
+                            {copiedField === `${clip.clip_id}-tags` ? (
+                              <Check className="w-3 h-3 text-emerald-400" />
+                            ) : (
+                              <Copy className="w-3 h-3 text-indigo-400" />
+                            )}
+                            {copiedField === `${clip.clip_id}-tags` ? "Copied!" : "Copy Hashtags"}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => copyToClipboard(clip.pinned_comment || `🔥 Did he go too far? Drop a comment below! 👇\n\n🔔 Subscribe to @AlphaGamingClips-r8w for daily clips!`, `${clip.clip_id}-pin`)}
+                            className="py-1.5 px-2 rounded-lg bg-[#1E2235] hover:bg-[#282D46] text-gray-300 font-semibold flex items-center justify-center gap-1 transition"
+                            title="Pin this comment on your Short to increase debate & view duration"
+                          >
+                            {copiedField === `${clip.clip_id}-pin` ? (
+                              <Check className="w-3 h-3 text-emerald-400" />
+                            ) : (
+                              <Share2 className="w-3 h-3 text-pink-400" />
+                            )}
+                            {copiedField === `${clip.clip_id}-pin` ? "Copied!" : "Pinned Comment"}
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -918,6 +969,28 @@ export default function Home() {
                     className="w-full bg-[#1A1D2B] border border-[#2B3048] rounded-xl p-2.5 text-white text-xs focus:outline-none focus:border-indigo-500"
                   />
                 </div>
+
+                {activePostModal.pinned_comment && (
+                  <div className="bg-[#161824] border border-[#232738] p-3 rounded-xl space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-gray-300 text-[11px] flex items-center gap-1.5">
+                        <Share2 className="w-3.5 h-3.5 text-pink-400" />
+                        Engagement Pinned Comment (Copy & Pin on Video)
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => copyToClipboard(activePostModal.pinned_comment!, "modal-pin")}
+                        className="text-[10px] px-2 py-0.5 rounded bg-indigo-600 hover:bg-indigo-500 text-white font-semibold flex items-center gap-1"
+                      >
+                        {copiedField === "modal-pin" ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                        {copiedField === "modal-pin" ? "Copied" : "Copy"}
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-gray-400 whitespace-pre-line bg-[#10121A] p-2 rounded-lg border border-gray-800">
+                      {activePostModal.pinned_comment}
+                    </p>
+                  </div>
+                )}
 
                 <div className="p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-xl text-[11px] text-indigo-300 space-y-1">
                   <p className="font-bold">⚡ How Antigravity Will Post This:</p>

@@ -48,6 +48,7 @@ class PostRequest(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
     tags: Optional[List[str]] = None
+    pinned_comment: Optional[str] = None
     visibility: str = "public" # public, unlisted, private
 
 @app.get("/")
@@ -146,6 +147,7 @@ def prepare_antigravity_post(req: PostRequest):
         "title": req.title or "Viral Moment! #Shorts",
         "description": req.description or "Automated Short #shorts",
         "tags": req.tags or ["shorts", "viral", "gaming"],
+        "pinned_comment": req.pinned_comment,
         "visibility": req.visibility,
         "instructions": "Call Antigravity's Chrome DevTools MCP or CMD uploader to publish this clip and thumbnail to YouTube Studio."
     }

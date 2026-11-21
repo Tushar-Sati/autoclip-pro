@@ -76,21 +76,23 @@ class ClippingPipeline:
         total_duration = info_peek.get("duration", 0)
         past_clips = history.get(video_id, [])
 
-        # Auto-advance scan window (e.g. 15 min chunks) on subsequent runs
+        # Determine dynamic fast-ingestion window (e.g. 3-5 mins is plenty for 3 viral shorts)
+        window_minutes = max(3, min(6, int((max_clips * target_duration * 2.2) / 60) + 1))
+
+        # Auto-advance scan window on subsequent runs
         if manual_offset_seconds is not None:
             start_offset = manual_offset_seconds
         else:
-            # Advance window by 15 mins (900s) for each past run
             run_number = len(past_clips) // max(1, max_clips)
-            start_offset = min(600 + (run_number * 900), max(0, int(total_duration - 900)))
+            start_offset = min(600 + (run_number * window_minutes * 60), max(0, int(total_duration - (window_minutes * 60))))
 
-        print(f"[Pipeline] Run #{len(past_clips)//max_clips + 1} for this stream. Scanning window starting at {start_offset}s (~{round(start_offset/60, 1)}m)...")
+        print(f"[Pipeline] Run #{len(past_clips)//max_clips + 1} for this stream. Scanning {window_minutes}m window starting at {start_offset}s (~{round(start_offset/60, 1)}m)...")
 
         # 2. Download Video, Audio, and Chat for this window in full 1080p
         download_result = self.downloader.download_video(
             youtube_url,
             start_offset_seconds=start_offset,
-            window_minutes=15
+            window_minutes=window_minutes
         )
         video_path = download_result["video_path"]
         audio_path = download_result["audio_path"]
@@ -220,6 +222,9 @@ class ClippingPipeline:
                 "suggested_titles": virality_eval["suggested_titles"],
                 "description": virality_eval["description"],
                 "hashtags": virality_eval["hashtags"],
+                "hashtags_string": virality_eval.get("hashtags_string", " ".join(virality_eval["hashtags"])),
+                "pinned_comment": virality_eval.get("pinned_comment", ""),
+                "growth_tips": virality_eval.get("growth_tips", []),
                 "layout_mode": framing_info["mode"],
                 "status": "ready"
             })

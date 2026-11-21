@@ -56,9 +56,10 @@ ScaledBorderAndShadow: yes
 
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
-Style: HormoziStyle,{font_name},{font_size},{primary_color},&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,5,3,2,60,60,{vertical_margin},1
-Style: HookHeadline,{font_name},52,&H0000FFFF&,&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,6,3,2,40,40,960,1
+Style: HormoziStyle,{font_name},{font_size},{primary_color},&H000000FF,&H00000000,&H90000000,-1,0,0,0,100,100,0,0,1,6,4,2,60,60,{vertical_margin},1
+Style: HookHeadline,{font_name},52,&H0000FFFF&,&H000000FF,&H00000000,&H90000000,-1,0,0,0,100,100,0,0,1,6,4,2,40,40,960,1
 Style: CreditWatermark,{font_name},28,&H60FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,2,1,7,40,40,40,1
+Style: SubscribeCTA,{font_name},44,&H0000FFFF&,&H000000FF,&H00000000,&H90000000,-1,0,0,0,100,100,0,0,1,5,3,2,40,40,240,1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
@@ -119,13 +120,20 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
                 for idx, item in enumerate(chunk):
                     text = item["word"]
                     if idx == active_idx:
-                        # Highlight active word with color tag
-                        line_parts.append(f"{{\\c{highlight_color}\\fscx110\\fscy110}}{text}{{\\r}}")
+                        # Highlight active word with color tag and dynamic pop
+                        line_parts.append(f"{{\\c{highlight_color}\\fscx115\\fscy115}}{text}{{\\r}}")
                     else:
                         line_parts.append(f"{{\\c{primary_color}}}{text}{{\\r}}")
 
                 formatted_text = " ".join(line_parts)
                 dialogue_lines.append(f"Dialogue: 0,{start_str},{end_str},HormoziStyle,,0,0,0,,{formatted_text}")
+
+        # Add subscriber call-to-action during the final 1.8 seconds (when captions are enabled)
+        if show_captions and clip_duration > 6.0:
+            cta_start = self.format_time_ass(max(0.0, clip_duration - 1.8))
+            dialogue_lines.append(
+                f"Dialogue: 2,{cta_start},{clip_duration_str},SubscribeCTA,,0,0,0,,{{\\c&H0000FFFF&}}👉 SUBSCRIBE FOR MORE! 🔔{{\\r}}"
+            )
 
         # Write to file with utf-8-sig encoding for ASS compatibility
         with open(output_path, "w", encoding="utf-8-sig") as f:

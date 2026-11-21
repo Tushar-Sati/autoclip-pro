@@ -51,10 +51,14 @@ class VideoDownloader:
         audio_path = self.output_dir / f"{file_tag}_audio.wav"
         chat_path = self.output_dir / f"{video_id}_chat.json"
 
+        from backend.app.config import found_ffmpeg
+        ffmpeg_loc = str(found_ffmpeg[0].parent) if found_ffmpeg else None
+
         # Download high quality 1080p 60fps using resilient HLS/MP4 formats
         ydl_opts = {
             'js_runtimes': {'node': {}},
-            'format': '617+140/303+140/bestvideo[height<=1080]+bestaudio/best[height<=1080]',
+            'ffmpeg_location': ffmpeg_loc,
+            'format': '312+234/617+234/bestvideo[height<=1080]+234/bestvideo[height<=1080]+bestaudio/best[height<=1080]',
             'outtmpl': str(self.output_dir / f"{file_tag}.%(ext)s"),
             'merge_output_format': 'mp4',
             'quiet': False,
