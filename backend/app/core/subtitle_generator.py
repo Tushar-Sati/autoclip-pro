@@ -24,19 +24,21 @@ class SubtitleGenerator:
         clip_start: float = 0.0,
         clip_duration: float = 30.0,
         words_per_line: int = 4,
+        headline: str = "",
         highlight_color: str = "&H0000FFFF&", # Neon Yellow in ASS (BBGGRR)
         primary_color: str = "&H00FFFFFF&",   # Crisp White
         font_name: str = "Arial",
         font_size: int = 70,
-        vertical_margin: int = 420,
+        vertical_margin: int = 380,
         uploader: str = "Streamer"
     ) -> str:
         """
         Generates an Advanced SubStation Alpha (.ass) file with word-by-word
-        karaoke-style active highlighting and clean top-left attribution watermark.
+        karaoke-style active highlighting, bold middle headline banner, and attribution.
         """
         clip_duration_str = self.format_time_ass(clip_duration)
         clean_uploader = uploader.replace("'", "").replace(":", "")
+        clean_headline = headline.replace("'", "").replace(":", "").upper()
 
         # Header definition
         ass_header = f"""[Script Info]
@@ -48,13 +50,18 @@ ScaledBorderAndShadow: yes
 [V4+ Styles]
 Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
 Style: HormoziStyle,{font_name},{font_size},{primary_color},&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,5,3,2,60,60,{vertical_margin},1
-Style: CreditWatermark,{font_name},32,&H60FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,2,1,7,40,40,50,1
+Style: HookHeadline,{font_name},52,&H0000FFFF&,&H000000FF,&H00000000,&H80000000,-1,0,0,0,100,100,0,0,1,6,3,2,40,40,960,1
+Style: CreditWatermark,{font_name},28,&H60FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,2,1,7,40,40,40,1
 
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 Dialogue: 0,0:00:00.00,{clip_duration_str},CreditWatermark,,0,0,0,,Clip from @{clean_uploader}
 """
+        if clean_headline:
+            ass_header += f"Dialogue: 1,0:00:00.00,{clip_duration_str},HookHeadline,,0,0,0,,{clean_headline}\n"
+
         dialogue_lines = []
+
 
 
         # Filter words to this clip timeframe and adjust timestamps relative to clip start

@@ -39,22 +39,26 @@ class VideoRenderer:
         if mode == "split_screen" and "facecam_box" in framing_info:
             fb = framing_info["facecam_box"]
             gb = framing_info.get("gameplay_crop", {"x": 0, "y": 0, "w": 1920, "h": 1080})
+            th = framing_info.get("top_height", 840)
+            bh = framing_info.get("bottom_height", 1080)
 
-            # Top: Streamer Facecam, Bottom: Gameplay
+            # Top: Full-bleed Streamer Facecam, Bottom: Centered Gameplay (excluding mini-cam)
             filter_complex = (
                 f"[0:v]crop={fb['w']}:{fb['h']}:{fb['x']}:{fb['y']},"
-                f"scale={self.target_width}:{self.half_height}:force_original_aspect_ratio=increase,"
-                f"crop={self.target_width}:{self.half_height}[top];"
+                f"scale={self.target_width}:{th}:force_original_aspect_ratio=increase,"
+                f"crop={self.target_width}:{th}[top];"
                 f"[0:v]crop={gb['w']}:{gb['h']}:{gb['x']}:{gb['y']},"
-                f"scale={self.target_width}:{self.half_height}:force_original_aspect_ratio=increase,"
-                f"crop={self.target_width}:{self.half_height}[bottom];"
-                f"[top][bottom]vstack=inputs=2"
+                f"scale={self.target_width}:{bh}:force_original_aspect_ratio=increase,"
+                f"crop={self.target_width}:{bh}[bottom];"
+                f"[top][bottom]vstack=inputs=2,"
+                f"drawbox=y={th-4}:color=black@0.95:width=iw:height=8:t=fill"
             )
 
             if sub_filter:
                 filter_complex += f",{sub_filter}"
 
             filter_complex += "[v]"
+
 
         else:
             # Center 9:16 crop

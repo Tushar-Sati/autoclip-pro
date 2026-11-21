@@ -15,7 +15,8 @@ class VideoDownloader:
         ydl_opts = {
             'quiet': True,
             'no_warnings': True,
-            'extract_flat': False
+            'extract_flat': False,
+            'js_runtimes': {'node': {}},
         }
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
@@ -30,29 +31,50 @@ class VideoDownloader:
                 "was_live": info.get("was_live", False)
             }
 
-    def download_video(self, url: str) -> Dict[str, Any]:
-        """Download video and extract 16kHz mono audio for processing."""
+    def download_video(
+        self,
+        url: str,
+        start_offset_seconds: int = 600,
+        window_minutes: int = 15
+    ) -> Dict[str, Any]:
+        """
+        Downloads high-quality 1080p stream slice and extracts 16kHz mono audio.
+        Supports offset scanning so subsequent runs process fresh parts of the stream.
+        """
         info = self.extract_info(url)
         video_id = info["id"]
-        video_path = self.output_dir / f"{video_id}.mp4"
-        audio_path = self.output_dir / f"{video_id}_audio.wav"
+        duration = info.get("duration", 0)
+        
+        # Unique file tag based on offset so multiple runs don't overwrite each other
+        file_tag = f"{video_id}_sec{start_offset_seconds}"
+        video_path = self.output_dir / f"{file_tag}.mp4"
+        audio_path = self.output_dir / f"{file_tag}_audio.wav"
         chat_path = self.output_dir / f"{video_id}_chat.json"
 
-        # 1. Download video (max 1080p for fast processing)
+        # Download high quality 1080p 60fps using resilient HLS/MP4 formats
         ydl_opts = {
-            'format': 'bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/best[height<=1080][ext=mp4]/best',
-            'outtmpl': str(self.output_dir / f"{video_id}.%(ext)s"),
+            'js_runtimes': {'node': {}},
+            'format': '617+140/303+140/bestvideo[height<=1080]+bestaudio/best[height<=1080]',
+            'outtmpl': str(self.output_dir / f"{file_tag}.%(ext)s"),
             'merge_output_format': 'mp4',
             'quiet': False,
             'no_warnings': True,
         }
 
+
+        if duration > window_minutes * 60:
+            start_sec = min(start_offset_seconds, max(0, int(duration - (window_minutes * 60))))
+            end_sec = start_sec + (window_minutes * 60)
+            ydl_opts['download_ranges'] = yt_dlp.utils.download_range_func(None, [(start_sec, end_sec)])
+            ydl_opts['force_keyframes_at_cuts'] = True
+            print(f"[Downloader] 1080p High-Quality Stream Ingestion: Window {start_sec}s -> {end_sec}s (~{window_minutes} mins)...")
+
         if not video_path.exists():
-            print(f"[Downloader] Downloading video: {url}")
+            print(f"[Downloader] Downloading 1080p video from: {url}")
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 ydl.download([url])
 
-        # 2. Extract 16kHz mono WAV for fast Whisper transcription
+        # Extract 16kHz mono WAV for fast Whisper transcription
         if not audio_path.exists():
             print(f"[Downloader] Extracting 16kHz audio track...")
             cmd = [
@@ -66,7 +88,6 @@ class VideoDownloader:
             ]
             subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-        # 3. Download chat if live stream or was live
         if info.get("is_live") or info.get("was_live"):
             self._try_download_chat(url, chat_path)
 
@@ -74,8 +95,10 @@ class VideoDownloader:
             "info": info,
             "video_path": str(video_path),
             "audio_path": str(audio_path),
-            "chat_path": str(chat_path) if chat_path.exists() else None
+            "chat_path": str(chat_path) if chat_path.exists() else None,
+            "window_start": start_sec if duration > window_minutes * 60 else 0
         }
+
 
     def _try_download_chat(self, url: str, output_chat_path: Path):
         """Attempts to download live chat replay via chat_downloader."""
