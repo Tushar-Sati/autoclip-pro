@@ -166,7 +166,7 @@ export default function Home() {
   }, [checkHealth]);
 
   // Safe API request wrapper that never crashes with raw JSON SyntaxErrors
-  const safeApiRequest = async (path: string, options?: RequestInit) => {
+  const safeApiRequest = useCallback(async (path: string, options?: RequestInit) => {
     const base = getEffectiveBackendUrl();
     let urlToFetch = "";
 
@@ -221,7 +221,30 @@ export default function Home() {
     }
 
     return await res.json();
-  };
+  }, [getEffectiveBackendUrl]);
+
+  // Automatically load previously generated clips into gallery
+  useEffect(() => {
+    const fetchPreviousClips = async () => {
+      try {
+        const data = await safeApiRequest("/api/clips");
+        if (data && data.success && Array.isArray(data.projects) && data.projects.length > 0) {
+          const allClips: Clip[] = [];
+          [...data.projects].reverse().forEach((p: any) => {
+            if (p.clips && Array.isArray(p.clips)) {
+              allClips.push(...p.clips);
+            }
+          });
+          if (allClips.length > 0) {
+            setClips(allClips);
+          }
+        }
+      } catch {
+        // Ignore initial fetch error if backend warming up
+      }
+    };
+    fetchPreviousClips();
+  }, [safeApiRequest]);
 
   const handleSaveSettings = async () => {
     const cleanUrl = customInputUrl.trim().replace(/\/$/, "");
